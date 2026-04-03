@@ -1,5 +1,7 @@
 <div align="center">
 
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Visit_Dashboard-00C853?style=for-the-badge&logoColor=white)](https://manojbarkam17.github.io/payshield-platform/)  [![LinkedIn](https://img.shields.io/badge/LinkedIn-Manoj_Barkam-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/manojbarkam17/)  [![GitHub](https://img.shields.io/badge/GitHub-ManojBarkam17-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ManojBarkam17)
+
 # PayShield — Real-Time Payment Processing & Fraud Detection Platform
 
 ### Production-Grade Microservices | Event-Driven Architecture | Enterprise Fintech
