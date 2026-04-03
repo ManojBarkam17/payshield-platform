@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PayShield — Real-Time Payment Processing & Fraud Detection Platform</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0e17;--card:#111827;--border:#1e293b;--primary:#3b82f6;--success:#10b981;--warning:#f59e0b;--danger:#ef4444;--text:#e2e8f0;--muted:#64748b;--accent:#8b5cf6}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.header{background:linear-gradient(135deg,#1e1b4b 0%,#0f172a 50%,#1e1b4b 100%);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:12px}
+.logo svg{width:36px;height:36px}
+.logo h1{font-size:20px;font-weight:700;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo span{font-size:11px;color:var(--muted);display:block;margin-top:-2px}
+.status-bar{display:flex;gap:16px;align-items:center}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--success);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.status-text{font-size:12px;color:var(--success)}
+.main{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:20px;max-width:1400px;margin:0 auto}
+@media(max-width:900px){.main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--primary),var(--accent))}
+.card h2{font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card h2 svg{width:16px;height:16px;opacity:.7}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;grid-column:1/-1}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.stat .value{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat .label{font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+.stat.green .value{color:var(--success)}
+.stat.blue .value{color:var(--primary)}
+.stat.yellow .value{color:var(--warning)}
+.stat.red .value{color:var(--danger)}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.form-group input,.form-group select{width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;outline:none;transition:.2s}
+.form-group input:focus,.form-group select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.btn{padding:12px 20px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:.2s;width:100%;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary{background:linear-gradient(135deg,var(--primary),var(--accent));color:white}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(59,130,246,.3)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.pipeline{display:flex;align-items:center;gap:0;margin:20px 0}
+.pipe-step{flex:1;text-align:center;padding:10px 8px;background:#0f172a;border:1px solid var(--border);font-size:11px;position:relative;transition:.3s}
+.pipe-step:first-child{border-radius:8px 0 0 8px}
+.pipe-step:last-child{border-radius:0 8px 8px 0}
+.pipe-step.active{background:var(--primary);border-color:var(--primary);color:white;font-weight:600}
+.pipe-step.done{background:#065f46;border-color:#059669;color:#6ee7b7}
+.pipe-step.failed{background:#7f1d1d;border-color:#dc2626;color:#fca5a5}
+.pipe-step .icon{font-size:16px;display:block;margin-bottom:2px}
+.tx-list{max-height:340px;overflow-y:auto;scrollbar-width:thin}
+.tx-item{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+.tx-item:last-child{border-bottom:none}
+.tx-id{font-family:monospace;color:var(--primary);font-size:12px}
+.tx-amount{font-weight:600;text-align:right}
+.badge{padding:3px 8px;border-radius:12px;font-size:10px;font-weight:600;text-transform:uppercase}
+.badge-approved{background:#065f46;color:#6ee7b7}
+.badge-pending{background:#78350f;color:#fbbf24}
+.badge-blocked{background:#7f1d1d;color:#fca5a5}
+.badge-processing{background:#1e3a5f;color:#93c5fd}
+.fraud-meter{height:12px;background:#1e293b;border-radius:6px;overflow:hidden;margin:8px 0}
+.fraud-fill{height:100%;border-radius:6px;transition:width .8s ease,background .5s}
+.fraud-rules{margin-top:12px}
+.rule-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,.05)}
+.rule-item .name{color:var(--muted)}
+.rule-item .score{font-weight:600;font-family:monospace}
+.ledger-entry{display:grid;grid-template-columns:auto 1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px}
+.ledger-type{padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;width:50px;text-align:center}
+.ledger-debit{background:#7f1d1d;color:#fca5a5}
+.ledger-credit{background:#065f46;color:#6ee7b7}
+.arch-diagram{font-family:monospace;font-size:10px;line-height:1.6;color:var(--muted);background:#0a0e17;padding:12px;border-radius:8px;overflow-x:auto;white-space:pre}
+.kafka-events{max-height:200px;overflow-y:auto}
+.event-item{padding:6px 8px;margin:4px 0;background:#0f172a;border-radius:6px;font-size:11px;font-family:monospace;border-left:3px solid var(--accent);animation:slideIn .3s}
+.event-item .topic{color:var(--accent);font-weight:600}
+.event-item .time{color:var(--muted);float:right}
+.full-width{grid-column:1/-1}
+.metrics-chart{height:120px;display:flex;align-items:flex-end;gap:3px;padding-top:10px}
+.bar{flex:1;background:linear-gradient(to top,var(--primary),var(--accent));border-radius:3px 3px 0 0;transition:height .5s ease;min-width:4px;opacity:.8}
+.bar:hover{opacity:1}
+.footer{text-align:center;padding:20px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);margin-top:10px}
+.footer a{color:var(--primary);text-decoration:none}
+.sparkline{display:inline-flex;align-items:flex-end;gap:1px;height:20px;vertical-align:middle;margin-left:8px}
+.sparkline .sp-bar{width:3px;background:var(--success);border-radius:1px;transition:height .3s}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="url(#g)"/><path d="M10 18l5 5 11-11" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><defs><linearGradient id="g" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#3b82f6"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs></svg>
+    <div><h1>PayShield</h1><span>Real-Time Payment Processing & Fraud Detection</span></div>
+  </div>
+  <div class="status-bar">
+    <div class="status-dot"></div>
+    <span class="status-text">All Systems Operational</span>
+    <span style="color:var(--muted);font-size:12px" id="clock"></span>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="stats-row">
+    <div class="stat green"><div class="value" id="s-processed">0</div><div class="label">Processed</div></div>
+    <div class="stat blue"><div class="value" id="s-throughput">0</div><div class="label">TPS</div></div>
+    <div class="stat yellow"><div class="value" id="s-flagged">0</div><div class="label">Flagged</div></div>
+    <div class="stat red"><div class="value" id="s-blocked">0</div><div class="label">Blocked</div></div>
+  </div>
+
+  <!-- Submit Payment -->
+  <div class="card">
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> Submit Payment</h2>
+    <div class="form-group"><label>Sender Account</label><input id="f-sender" value="ACC-8847-MANOJ" placeholder="Sender account ID"></div>
+    <div class="form-group"><label>Recipient Account</label><input id="f-recipient" value="ACC-2291-VENDOR" placeholder="Recipient account ID"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Amount ($)</label><input id="f-amount" type="number" value="250.00" min="0.01" step="0.01"></div>
+      <div class="form-group"><label>Currency</label><select id="f-currency"><option>USD</option><option>EUR</option><option>GBP</option></select></div>
+    </div>
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-step" id="p1"><span class="icon">1</span>Validate</div>
+      <div class="pipe-step" id="p2"><span class="icon">2</span>Idempotency</div>
+      <div class="pipe-step" id="p3"><span class="icon">3</span>Fraud Check</div>
+      <div class="pipe-step" id="p4"><span class="icon">4</span>Process</div>
+      <div class="pipe-step" id="p5"><span class="icon">5</span>Ledger</div>
+      <div class="pipe-step" id="p6"><span class="icon">6</span>Notify</div>
+    </div>
+    <button class="btn btn-primary" id="btn-submit" onclick="submitPayment()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      Process Payment
+    </button>
+  </div>
+
+  <!-- Fraud Detection Engine -->
+  <div class="card">
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Fraud Detection Engine</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px">Risk Score</span>
+      <span id="fraud-score" style="font-size:24px;font-weight:700;color:var(--success)">0</span>
+    </div>
+    <div class="fraud-meter"><div class="fraud-fill" id="fraud-fill" style="width:0%;background:var(--success)"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:12px">
+      <span>0 — Safe</span><span>30 — Review</span><span>70 — High Risk</span><span>100</span>
+    </div>
+    <div id="fraud-verdict" style="text-align:center;padding:8px;border-radius:8px;background:#065f46;color:#6ee7b7;font-weight:600;font-size:13px;margin-bottom:12px">APPROVED — Low Risk</div>
+    <div class="fraud-rules" id="fraud-rules">
+      <div class="rule-item"><span class="name">High Amount Rule (&gt;$10,000)</span><span class="score" id="r-amount">0</span></div>
+      <div class="rule-item"><span class="name">Velocity Rule (&gt;5 txn/min)</span><span class="score" id="r-velocity">0</span></div>
+      <div class="rule-item"><span class="name">Time Pattern (2-5 AM)</span><span class="score" id="r-time">0</span></div>
+      <div class="rule-item"><span class="name">New Account Rule</span><span class="score" id="r-account">0</span></div>
+      <div class="rule-item"><span class="name">Cross-Border Rule</span><span class="score" id="r-cross">0</span></div>
+    </div>
+  </div>
+
+  <!-- Transaction Feed -->
+  <div class="card">
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Transaction Feed</h2>
+    <div class="tx-list" id="tx-list"></div>
+  </div>
+
+  <!-- Kafka Events -->
+  <div class="card">
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Kafka Event Stream</h2>
+    <div class="kafka-events" id="kafka-events"></div>
+  </div>
+
+  <!-- Double-Entry Ledger -->
+  <div class="card">
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg> Double-Entry Ledger</h2>
+    <div id="ledger-entries" style="max-height:280px;overflow-y:auto"></div>
+  </div>
+
+  <!-- Throughput Chart -->
+  <div class="card">
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg> Throughput (last 60s)</h2>
+    <div class="metrics-chart" id="chart"></div>
+  </div>
+
+  <!-- Architecture -->
+  <div class="card full-width">
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg> System Architecture</h2>
+    <div class="arch-diagram">
+  Client ──→ <span style="color:#60a5fa">API Gateway</span> ──→ <span style="color:#34d399">Payment Service</span> ──→ <span style="color:#a78bfa">Kafka</span> ──→ <span style="color:#f59e0b">Fraud Detection</span>
+               │ JWT Auth                │ Idempotency          │              │ 5 Rule Engine
+               │ Rate Limit              │ Validation           │              │ Score 0-100
+               │ Request Log             ▼                      │              ▼
+               │                   <span style="color:#f472b6">PostgreSQL</span>              │         Approve / Flag / Block
+               │                                                │              │
+               │                                                ▼              │
+               │                                      <span style="color:#60a5fa">Ledger Service</span> ◄──────┘
+               │                                         │ Double-Entry
+               │                                         │ DEBIT + CREDIT
+               │                                         ▼
+               │                                  <span style="color:#fb923c">Notification Service</span>
+               │                                         │ Email / SMS / Push
+               ▼                                         ▼
+          <span style="color:#ef4444">Redis</span> Cache                              <span style="color:#a78bfa">Zipkin</span> Tracing
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <strong>PayShield Platform</strong> — Built by <a href="https://github.com/ManojBarkam17" target="_blank">Manoj Barkam</a> |
+  Java 17 · Spring Boot 3.2 · Apache Kafka · PostgreSQL · Redis · Docker |
+  <a href="https://github.com/ManojBarkam17/payshield-platform" target="_blank">View Source on GitHub</a>
+</div>
+
+<script>
+// State
+let txCount = 0, flaggedCount = 0, blockedCount = 0, tps = 0;
+let tpsHistory = new Array(60).fill(0);
+let txPerSecond = 0;
+let isProcessing = false;
+
+// Clock
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+}, 1000);
+
+// Generate ID
+function genId() {
+  return 'TXN-' + Math.random().toString(36).substr(2,8).toUpperCase();
+}
+
+// Fraud scoring
+function calculateFraud(amount, currency) {
+  let scores = {amount: 0, velocity: 0, time: 0, account: 0, cross: 0};
+
+  if (amount > 10000) scores.amount = 30;
+  else if (amount > 5000) scores.amount = 15;
+  else if (amount > 2000) scores.amount = 5;
+
+  if (txPerSecond > 5) scores.velocity = 40;
+  else if (txPerSecond > 3) scores.velocity = 20;
+  else if (txPerSecond > 1) scores.velocity = 5;
+
+  const hour = new Date().getHours();
+  if (hour >= 2 && hour <= 5) scores.time = 15;
+
+  scores.account = Math.random() > 0.8 ? 15 : 0;
+  if (currency !== 'USD') scores.cross = 10;
+
+  return scores;
+}
+
+// Add Kafka event
+function addKafkaEvent(topic, data) {
+  const el = document.getElementById('kafka-events');
+  const time = new Date().toLocaleTimeString();
+  const div = document.createElement('div');
+  div.className = 'event-item';
+  div.innerHTML = '<span class="topic">' + topic + '</span><span class="time">' + time + '</span><br>' + data;
+  el.prepend(div);
+  if (el.children.length > 20) el.removeChild(el.lastChild);
+}
+
+// Add ledger entry
+function addLedgerEntry(txId, account, type, amount, desc) {
+  const el = document.getElementById('ledger-entries');
+  const div = document.createElement('div');
+  div.className = 'ledger-entry';
+  div.innerHTML = '<span class="ledger-type ' + (type === 'DEBIT' ? 'ledger-debit' : 'ledger-credit') + '">' + type + '</span>' +
+    '<span>' + desc + ' <span style="color:var(--muted);font-size:10px">' + account + '</span></span>' +
+    '<span style="font-weight:600;' + (type === 'DEBIT' ? 'color:var(--danger)' : 'color:var(--success)') + '">$' + amount.toFixed(2) + '</span>';
+  el.prepend(div);
+  if (el.children.length > 20) el.removeChild(el.lastChild);
+}
+
+// Add transaction to feed
+function addTransaction(txId, amount, currency, status) {
+  const el = document.getElementById('tx-list');
+  const badgeClass = status === 'APPROVED' ? 'badge-approved' : status === 'FLAGGED' ? 'badge-pending' : status === 'BLOCKED' ? 'badge-blocked' : 'badge-processing';
+  const div = document.createElement('div');
+  div.className = 'tx-item';
+  div.innerHTML = '<span class="tx-id">' + txId + '</span>' +
+    '<span class="tx-amount">$' + parseFloat(amount).toFixed(2) + '</span>' +
+    '<span>' + currency + '</span>' +
+    '<span class="badge ' + badgeClass + '">' + status + '</span>';
+  el.prepend(div);
+  if (el.children.length > 30) el.removeChild(el.lastChild);
+}
+
+// Update stats
+function updateStats() {
+  document.getElementById('s-processed').textContent = txCount.toLocaleString();
+  document.getElementById('s-throughput').textContent = tps;
+  document.getElementById('s-flagged').textContent = flaggedCount;
+  document.getElementById('s-blocked').textContent = blockedCount;
+}
+
+// Update chart
+function updateChart() {
+  tpsHistory.push(txPerSecond);
+  tpsHistory.shift();
+  const max = Math.max(...tpsHistory, 1);
+  const chart = document.getElementById('chart');
+  chart.innerHTML = '';
+  tpsHistory.forEach(v => {
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.height = (v / max * 100) + '%';
+    chart.appendChild(bar);
+  });
+}
+
+// Pipeline animation
+async function animatePipeline(steps, failAt) {
+  for (let i = 0; i < steps.length; i++) {
+    const el = document.getElementById(steps[i]);
+    if (failAt === i) {
+      el.className = 'pipe-step failed';
+      el.querySelector('.icon').textContent = '✗';
+      return;
+    }
+    el.className = 'pipe-step active';
+    el.querySelector('.icon').textContent = '⟳';
+    await new Promise(r => setTimeout(r, 300 + Math.random() * 200));
+    el.className = 'pipe-step done';
+    el.querySelector('.icon').textContent = '✓';
+  }
+}
+
+// Reset pipeline
+function resetPipeline() {
+  ['p1','p2','p3','p4','p5','p6'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.className = 'pipe-step';
+    el.querySelector('.icon').textContent = (i + 1);
+  });
+}
+
+// Main submit
+async function submitPayment() {
+  if (isProcessing) return;
+  isProcessing = true;
+  document.getElementById('btn-submit').disabled = true;
+
+  const amount = parseFloat(document.getElementById('f-amount').value) || 100;
+  const currency = document.getElementById('f-currency').value;
+  const sender = document.getElementById('f-sender').value;
+  const recipient = document.getElementById('f-recipient').value;
+  const txId = genId();
+
+  resetPipeline();
+  txPerSecond++;
+
+  // Kafka: payment.submitted
+  addKafkaEvent('payment.submitted', '{"txId":"' + txId + '","amount":' + amount + ',"currency":"' + currency + '"}');
+
+  // Calculate fraud
+  const fraudScores = calculateFraud(amount, currency);
+  const totalScore = Object.values(fraudScores).reduce((a, b) => a + b, 0);
+
+  // Animate pipeline
+  const failAt = totalScore > 70 ? 3 : -1;
+  await animatePipeline(['p1','p2','p3','p4','p5','p6'], failAt);
+
+  // Update fraud display
+  document.getElementById('r-amount').textContent = '+' + fraudScores.amount;
+  document.getElementById('r-velocity').textContent = '+' + fraudScores.velocity;
+  document.getElementById('r-time').textContent = '+' + fraudScores.time;
+  document.getElementById('r-account').textContent = '+' + fraudScores.account;
+  document.getElementById('r-cross').textContent = '+' + fraudScores.cross;
+
+  document.getElementById('fraud-score').textContent = totalScore;
+  const fill = document.getElementById('fraud-fill');
+  fill.style.width = totalScore + '%';
+
+  const verdict = document.getElementById('fraud-verdict');
+  let status;
+  if (totalScore > 70) {
+    fill.style.background = 'var(--danger)';
+    verdict.style.background = '#7f1d1d'; verdict.style.color = '#fca5a5';
+    verdict.textContent = 'BLOCKED — High Risk (Score: ' + totalScore + ')';
+    status = 'BLOCKED';
+    blockedCount++;
+    addKafkaEvent('fraud.result', '{"txId":"' + txId + '","score":' + totalScore + ',"action":"BLOCK"}');
+  } else if (totalScore > 30) {
+    fill.style.background = 'var(--warning)';
+    verdict.style.background = '#78350f'; verdict.style.color = '#fbbf24';
+    verdict.textContent = 'FLAGGED — Manual Review (Score: ' + totalScore + ')';
+    status = 'FLAGGED';
+    flaggedCount++;
+    addKafkaEvent('fraud.result', '{"txId":"' + txId + '","score":' + totalScore + ',"action":"FLAG"}');
+  } else {
+    fill.style.background = 'var(--success)';
+    verdict.style.background = '#065f46'; verdict.style.color = '#6ee7b7';
+    verdict.textContent = 'APPROVED — Low Risk (Score: ' + totalScore + ')';
+    status = 'APPROVED';
+    addKafkaEvent('fraud.result', '{"txId":"' + txId + '","score":' + totalScore + ',"action":"APPROVE"}');
+  }
+
+  document.getElementById('fraud-score').style.color = totalScore > 70 ? 'var(--danger)' : totalScore > 30 ? 'var(--warning)' : 'var(--success)';
+
+  // Transaction
+  txCount++;
+  addTransaction(txId, amount, currency, status);
+
+  // Ledger entries (if not blocked)
+  if (status !== 'BLOCKED') {
+    addLedgerEntry(txId, sender, 'DEBIT', amount, 'Payment to ' + recipient);
+    addLedgerEntry(txId, recipient, 'CREDIT', amount, 'Received from ' + sender);
+    addKafkaEvent('ledger.entry', '{"txId":"' + txId + '","type":"DOUBLE_ENTRY","balanced":true}');
+    addKafkaEvent('notification.send', '{"txId":"' + txId + '","channel":"EMAIL","status":"' + status + '"}');
+  }
+
+  tps = txPerSecond;
+  updateStats();
+
+  isProcessing = false;
+  document.getElementById('btn-submit').disabled = false;
+}
+
+// Auto-generate some transactions on load
+async function seedData() {
+  const amounts = [150, 89.99, 2500, 450, 1200, 75, 3800, 199.50];
+  for (let i = 0; i < amounts.length; i++) {
+    document.getElementById('f-amount').value = amounts[i];
+    await submitPayment();
+    await new Promise(r => setTimeout(r, 200));
+  }
+  document.getElementById('f-amount').value = '250.00';
+}
+
+// TPS counter reset
+setInterval(() => {
+  tps = txPerSecond;
+  updateChart();
+  txPerSecond = 0;
+}, 1000);
+
+// Initialize
+updateChart();
+setTimeout(seedData, 500);
+</script>
+</body>
+</html>
